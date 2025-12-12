@@ -1,0 +1,163 @@
+{
+  "timestamp": "2025-12-03T23:50:31.072673",
+  "configuration": "M=64, Local Calibration, 32K shots",
+  "tests": [
+    {
+      "name": "3-Asset Standard",
+      "results": [
+        {
+          "strike": 90.0,
+          "type": "ITM",
+          "classical": 0.9101177566060225,
+          "quantum": 0.9414108211915089,
+          "error_percent": 3.438353373324279,
+          "circuit_depth": 2,
+          "num_qubits": 6,
+          "sigma_p": 0.19958707372973833
+        },
+        {
+          "strike": 100.0,
+          "type": "ATM",
+          "classical": 0.8032029791659354,
+          "quantum": 0.8258437470415168,
+          "error_percent": 2.8188102463330047,
+          "circuit_depth": 2,
+          "num_qubits": 6,
+          "sigma_p": 0.19958707372973833
+        },
+        {
+          "strike": 110.0,
+          "type": "OTM",
+          "classical": 0.723513258722474,
+          "quantum": 0.71751887414777,
+          "error_percent": 0.8285106737765048,
+          "circuit_depth": 2,
+          "num_qubits": 6,
+          "sigma_p": 0.19958707372973833
+        }
+      ]
+    },
+    {
+      "name": "5-Asset Portfolio",
+      "results": [
+        {
+          "strike": 90.0,
+          "type": "ITM",
+          "classical": 1.3212678202199077,
+          "quantum": 1.308172037875639,
+          "error_percent": 0.9911527507034236,
+          "circuit_depth": 2,
+          "num_qubits": 6,
+          "sigma_p": 0.13239429746027584
+        },
+        {
+          "strike": 100.0,
+          "type": "ATM",
+          "classical": 1.1701088576247227,
+          "quantum": 1.1541741418973466,
+          "error_percent": 1.3618148109504122,
+          "circuit_depth": 2,
+          "num_qubits": 6,
+          "sigma_p": 0.13239429746027584
+        },
+        {
+          "strike": 110.0,
+          "type": "OTM",
+          "classical": 1.0612078284032507,
+          "quantum": 1.0890697154636846,
+          "error_percent": 2.625488270507425,
+          "circuit_depth": 2,
+          "num_qubits": 6,
+          "sigma_p": 0.13239429746027584
+        }
+      ]
+    },
+    {
+      "name": "3-Asset 2Y Maturity",
+      "results": [
+        {
+          "strike": 90.0,
+          "type": "ITM",
+          "classical": 0.7215029106757852,
+          "quantum": 0.7021093559003195,
+          "error_percent": 2.6879385361454715,
+          "circuit_depth": 2,
+          "num_qubits": 6,
+          "sigma_p": 0.19958707372973833
+        },
+        {
+          "strike": 100.0,
+          "type": "ATM",
+          "classical": 0.6186732455933422,
+          "quantum": 0.6030003977754288,
+          "error_percent": 2.5332997554924668,
+          "circuit_depth": 2,
+          "num_qubits": 6,
+          "sigma_p": 0.19958707372973833
+        },
+        {
+          "strike": 110.0,
+          "type": "OTM",
+          "classical": 0.5497009389584991,
+          "quantum": 0.5235943005198777,
+          "error_percent": 4.749243923083869,
+          "circuit_depth": 2,
+          "num_qubits": 6,
+          "sigma_p": 0.19958707372973833
+        }
+      ]
+    },
+    {
+      "name": "M=32 vs M=64 Comparison",
+      "M32": [
+        {
+          "strike": 100.0,
+          "type": "ATM",
+          "classical": 0.8032029791659354,
+          "quantum": 0.8693540019909576,
+          "error_percent": 8.235903568698777,
+          "circuit_depth": 2,
+          "num_qubits": 5,
+          "sigma_p": 0.19958707372973833
+        }
+      ],
+      "M64": [
+        {
+          "strike": 100.0,
+          "type": "ATM",
+          "classical": 0.8032029791659354,
+          "quantum": 0.7888939098716073,
+          "error_percent": 1.781501023463202,
+          "circuit_depth": 2,
+          "num_qubits": 6,
+          "sigma_p": 0.19958707372973833
+        }
+      ]
+    },
+    {
+      "name": "Extreme Strikes",
+      "results": [
+        {
+          "strike": 80.0,
+          "type": "Deep ITM",
+          "classical": 1.0452830422217205,
+          "quantum": 1.073408260140864,
+          "error_percent": 2.690679632510271,
+          "circuit_depth": 2,
+          "num_qubits": 6,
+          "sigma_p": 0.19958707372973833
+        },
+        {
+          "strike": 120.0,
+          "type": "Deep OTM",
+          "classical": 0.6500081769974606,
+          "quantum": 0.6515530787684954,
+          "error_percent": 0.23767420560324273,
+          "circuit_depth": 2,
+          "num_qubits": 6,
+          "sigma_p": 0.19958707372973833
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "timestamp": "2025-12-04T00:01:33.632819",
+  "portfolio": {
+    "assets": 3,
+    "sigma_p": 0.19958707372973833
+  },
+  "strike": 100.0,
+  "simulator": {
+    "classical": 0.8032029791659354,
+    "quantum": 0.7924309636312374,
+    "error_percent": 1.3411324178458461,
+    "circuit_depth": 2,
+    "num_qubits": 6
+  },
+  "hardware": {
+    "backend": "ibm_torino",
+    "classical": 0.8032029791659354,
+    "quantum": 0.8038558651429077,
+    "error_percent": 0.08128530320571026,
+    "noise_contribution": -1.2598471146401358
+  }
+}

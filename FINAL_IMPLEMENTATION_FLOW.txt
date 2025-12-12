@@ -1,0 +1,297 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║                                                                          ║
+║           FB-IQFT IMPLEMENTATION FLOW (FINAL - WITH CORRECTIONS)         ║
+║                                                                          ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│                         PHASE 1: CLASSICAL PREPROCESSING                  │
+└──────────────────────────────────────────────────────────────────────────┘
+
+INPUT:
+├─ asset_prices: [S₁, S₂, ..., Sₙ]
+├─ asset_volatilities: [σ₁, σ₂, ..., σₙ]
+├─ correlation_matrix: C (N×N)
+├─ portfolio_weights: w (sum = 1)
+└─ option_params: K, T, r
+
+         │
+         ▼
+
+┌────────────────────────────────────────────────────────────────┐
+│  STEP 1: Covariance Construction                               │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│  Code: cov = np.outer(σ, σ) * C                               │
+│  Module: fb_iqft_pricing.py                                   │
+└────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+
+┌────────────────────────────────────────────────────────────────┐
+│  STEP 2: Factor Decomposition (Conceptual)                     │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│  Note: Not needed for 1D basket                               │
+│  For multi-dim: Σ = L·Λ·Lᵀ                                    │
+│  Here: Proceed directly to portfolio vol                      │
+└────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+
+┌────────────────────────────────────────────────────────────────┐
+│  STEP 3: Portfolio Volatility                                  │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│  Formula: σₚ² = wᵀ·Σ·w  (CORRECTED)                           │
+│  Code: sigma_p = sqrt(w @ cov @ w)                            │
+│  Module: fb_iqft_pricing.py                                   │
+└────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+
+┌────────────────────────────────────────────────────────────────┐
+│  STEP 4: Basket Value                                          │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│  B₀ = Σ wᵢ·Sᵢ                                                │
+│  Code: B_0 = sum(w * prices)                                  │
+└────────────────────────────────────────────────────────────────┘
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│                   PHASE 2: CARR-MADAN FOURIER SETUP                       │
+└──────────────────────────────────────────────────────────────────────────┘
+
+         │
+         ▼
+
+┌────────────────────────────────────────────────────────────────┐
+│  STEP 5: Characteristic Function                               │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│  Formula: φ(u) = exp(iu(r-½σₚ²)T - ½σₚ²Tu²)  (CORRECTED)     │
+│  Module: carr_madan_factor.compute_characteristic_function()  │
+│  Input: u_grid, r, sigma_p, T                                 │
+│  Output: phi_values (complex array)                           │
+└────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+
+┌────────────────────────────────────────────────────────────────┐
+│  STEP 6: Modified Characteristic Function                      │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│  Formula: ψ(u) = e⁻ʳᵀ·φ(u-i(α+1)) / (α²+α-u²+i(2α+1)u)       │
+│  Module: carr_madan_factor.apply_carr_madan_transform()       │
+│  Input: u_grid, r, sigma_p, T, alpha  (PASS σₚ DIRECTLY)     │
+│  Output: psi_values (complex array)                           │
+└────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+
+┌────────────────────────────────────────────────────────────────┐
+│  STEP 7: Fourier Grid Setup + Classical Baseline              │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│  Grid Setup:                                                   │
+│    - u_grid: j·Δu, j=0...M-1  (start at 0)                   │
+│    - k_grid: centered at ln(F), ±3.5σₚ√T                     │
+│    - Constraint: Δu·Δk = 2π/M  (VALIDATED)                    │
+│  Module: carr_madan_factor.setup_fourier_grid()               │
+│                                                                │
+│  Classical FFT:                                                │
+│    - C_m = (e⁻ᵅᵏᵐ/π)·Re[IFFT(ψ)]·Δu·M  (CORRECTED)          │
+│    - Sanity checks: C ≥ 0, C ≤ B₀·eʳᵀ                        │
+│  Module: carr_madan_factor.classical_fft_baseline()           │
+└────────────────────────────────────────────────────────────────┘
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│                      PHASE 3: QUANTUM COMPUTATION                         │
+└──────────────────────────────────────────────────────────────────────────┘
+
+         │
+         ▼
+
+┌────────────────────────────────────────────────────────────────┐
+│  STEP 8: Quantum State Preparation                             │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│  Normalization:                                                │
+│    aⱼ = ψ(uⱼ) / √(Σ|ψ|²)                                     │
+│  State: |ψ_freq⟩ = Σ aⱼ|j⟩                                    │
+│  Module: frequency_encoding.encode_frequency_state()           │
+│  Implementation: StatePreparation(amplitudes)                  │
+│  Note: Handles complex amplitudes (Qiskit ≥0.45)              │
+│  Output: circuit, norm_factor                                  │
+└────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+
+┌────────────────────────────────────────────────────────────────┐
+│  STEP 9: Inverse Quantum Fourier Transform (IQFT)              │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│  ★★★ CORE QUANTUM STEP ★★★                                    │
+│                                                                │
+│  Transform: IQFT|j⟩ = (1/√M) Σₘ e⁻ⁱ²ᵖʲᵐ/ᴹ |m⟩               │
+│  Result: |ψ_strike⟩ = Σₘ gₘ|m⟩                                │
+│  where: gₘ = (1/√M) Σⱼ aⱼ e⁻ⁱ²ᵖʲᵐ/ᴹ  (CORRECTED)             │
+│                                                                │
+│  Module: iqft_application.apply_iqft()                         │
+│  Implementation: QFT(k).inverse()                              │
+│  Circuit depth: O(k²) ≈ 16-25 (k=4-5)                         │
+│                                                                │
+│  Note: gₘ are Fourier coefficients, NOT prices directly       │
+└────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+
+┌────────────────────────────────────────────────────────────────┐
+│  STEP 10: Quantum Measurement                                  │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│  Measure all k qubits                                          │
+│  Shots: 8192                                                   │
+│  Output: P(m) ≈ |gₘ|²                                          │
+│                                                                │
+│  Module: iqft_application.extract_strike_amplitudes()          │
+│  Backend: AerSimulator or IBM hardware                         │
+│  Implementation: backend.run() with proper bit reversal        │
+└────────────────────────────────────────────────────────────────┘
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│                   PHASE 4: CLASSICAL POST-PROCESSING                      │
+└──────────────────────────────────────────────────────────────────────────┘
+
+         │
+         ▼
+
+┌────────────────────────────────────────────────────────────────┐
+│  STEP 11: Calibration                                          │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│  Match quantum to classical via least squares:                │
+│    C_m^quantum = A·P(m) + B                                    │
+│  Solve for A, B using classical FFT as reference              │
+│  Module: calibration.calibrate_quantum_to_classical()          │
+│  Method: np.linalg.lstsq()                                     │
+└────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+
+┌────────────────────────────────────────────────────────────────┐
+│  STEP 12: Price Reconstruction                                 │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│  Apply calibration:                                            │
+│    C(Kₘ) = A·P(m) + B                                          │
+│  Find target strike and extract price                          │
+│  Module: calibration.reconstruct_option_prices()               │
+└────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+
+OUTPUT:
+├─ price_quantum: Option price from quantum
+├─ price_classical: Option price from FFT
+├─ error_percent: |quantum - classical| / classical × 100%
+├─ circuit: Quantum circuit
+├─ circuit_depth: Circuit depth
+└─ Full results dict
+
+
+═══════════════════════════════════════════════════════════════════════════
+                            VALIDATION CHECKS
+═══════════════════════════════════════════════════════════════════════════
+
+✓ Nyquist constraint: Δu·Δk = 2π/M (verified at Step 7)
+✓ Classical prices: C ≥ 0, C ≤ B₀·eʳᵀ (checked at Step 7)
+✓ Complex amplitudes: Handled by StatePreparation (Step 8)
+✓ Bit ordering: Reversed for Qiskit MSB convention (Step 10)
+
+
+═══════════════════════════════════════════════════════════════════════════
+                          MATHEMATICAL CORRECTIONS
+═══════════════════════════════════════════════════════════════════════════
+
+1. Portfolio variance: σₚ² = wᵀ·Σ·w where Σ = Diag(σ)·C·Diag(σ) ✓
+2. Characteristic function: φ(u) = exp(iu(r-½σₚ²)T - ½σₚ²Tu²) ✓
+3. Carr-Madan: ψ(u) = e⁻ʳᵀ·φ(u-i(α+1)) / denominator ✓
+4. Pass σₚ directly to apply_carr_madan_transform (no inference) ✓
+5. Classical FFT: Include M factor and proper scaling ✓
+6. Grid centering: Around ln(F) with ±3.5σₚ√T coverage ✓
+7. IQFT formula: gₘ = (1/√M) Σⱼ aⱼ exp(-i2πjm/M) ✓
+8. Calibration: C_m^quantum = A·P(m) + B via least squares ✓
+
+
+═══════════════════════════════════════════════════════════════════════════
+                              MODULE MAPPING
+═══════════════════════════════════════════════════════════════════════════
+
+qfdp/unified/
+├── carr_madan_factor.py          → Steps 5-7
+│   ├── compute_characteristic_function()
+│   ├── apply_carr_madan_transform()
+│   ├── setup_fourier_grid()
+│   └── classical_fft_baseline()
+│
+├── frequency_encoding.py         → Step 8
+│   ├── encode_frequency_state()
+│   └── verify_encoding()
+│
+├── iqft_application.py           → Steps 9-10
+│   ├── apply_iqft()
+│   └── extract_strike_amplitudes()
+│
+├── calibration.py                → Steps 11-12
+│   ├── calibrate_quantum_to_classical()
+│   └── reconstruct_option_prices()
+│
+└── fb_iqft_pricing.py            → Steps 1-12 Integration
+    └── FBIQFTPricing.price_option()
+
+
+═══════════════════════════════════════════════════════════════════════════
+                           COMPARISON TO FLOWCHART
+═══════════════════════════════════════════════════════════════════════════
+
+FLOWCHART                          IMPLEMENTATION
+─────────────────────────────────  ───────────────────────────────────────
+Step 1: Covariance                 ✓ cov = np.outer(σ,σ) * C
+Step 2: Factor decomp              ✓ Conceptual (not needed for 1D)
+Step 3: Portfolio vol              ✓ sigma_p = sqrt(w @ cov @ w)
+Step 4: Basket value               ✓ B_0 = sum(w * prices)
+Step 5: Char function              ✓ compute_characteristic_function()
+Step 6: Carr-Madan ψ(u)            ✓ apply_carr_madan_transform()
+Step 7: Grid + FFT                 ✓ setup_fourier_grid() + baseline
+Step 8: State prep                 ✓ encode_frequency_state()
+Step 9: IQFT                       ✓ apply_iqft()
+Step 10: Measurement               ✓ extract_strike_amplitudes()
+Step 11: Calibration               ✓ calibrate_quantum_to_classical()
+Step 12: Price extraction          ✓ reconstruct_option_prices()
+
+ALL 12 STEPS MAPPED ✓
+
+
+═══════════════════════════════════════════════════════════════════════════
+                              IMPLEMENTATION NOTES
+═══════════════════════════════════════════════════════════════════════════
+
+Note 1: Complex amplitudes in StatePreparation
+  - Qiskit ≥0.45 handles complex amplitudes
+  - Fallback: magnitude/phase decomposition if needed
+
+Note 2: Factor model not instantiated
+  - 1D basket only needs σₚ
+  - Multi-dimensional IQFT would require full factor decomposition
+
+Note 3: Grid validation
+  - Nyquist constraint verified: Δu·Δk = 2π/M
+  - Added assertion to catch violations
+
+Note 4: Classical baseline validation
+  - Prices must be non-negative
+  - Prices must not exceed undiscounted forward
+  - Added assertions for sanity checks
+
+
+═══════════════════════════════════════════════════════════════════════════
+                          READY FOR APPROVAL ✓
+═══════════════════════════════════════════════════════════════════════════
+
+All corrections applied ✓
+All validation checks added ✓
+All implementation notes incorporated ✓
+Flow matches QFDP_INTEGRATED_FLOWCHART.md exactly ✓

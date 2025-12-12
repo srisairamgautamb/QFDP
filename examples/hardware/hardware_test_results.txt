@@ -1,0 +1,20 @@
+Combined FB-IQFT & FT-QAE Hardware Test Results
+================================================================================
+Timestamp: 2025-12-03 19:03:14.882260
+
+FB-IQFT (Hardware):
+  Price: $12.6505
+  Classical MC: $5.9919
+  Error: 111.13%
+  Depth: 50
+  Wall Time: 19.7s
+
+FT-QAE (Simulator):
+  Price: $2877.43
+  Classical MC: $5.64
+  Error: 50893.95%
+  Depth: 130
+  Qubits: 17
+  Wall Time: 19.6s
+  Note: Simulator - simplified oracle
+

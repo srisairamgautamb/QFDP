@@ -1,0 +1,14 @@
+Factor-Based Quantum Monte Carlo - Final Results
+======================================================================
+
+SIMULATOR:
+  Price: $5.7931
+  Classical: $5.6909
+  Error: 1.80%
+
+HARDWARE:
+  Price: $7.0633
+  Classical: $5.6909
+  Error: 24.12%
+
+Target achieved: False

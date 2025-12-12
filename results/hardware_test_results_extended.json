@@ -1,0 +1,48 @@
+{
+  "timestamp": "2025-12-04T00:10:05.705472",
+  "backend": "ibm_fez",
+  "portfolio": {
+    "assets": 3,
+    "weights": [
+      0.4,
+      0.3,
+      0.3
+    ],
+    "volatilities": [
+      0.2,
+      0.25,
+      0.3
+    ],
+    "T": 1.0,
+    "r": 0.05
+  },
+  "strikes": {
+    "ITM": {
+      "K": 90.0,
+      "classical": 0.9101177566060225,
+      "quantum": 0.9081679568858465,
+      "error_percent": 0.2142359827641502,
+      "circuit_depth": 2,
+      "num_qubits": 6,
+      "sigma_p": 0.19958707372973833
+    },
+    "ATM": {
+      "K": 100.0,
+      "classical": 0.8032029791659354,
+      "quantum": 0.8006948241387633,
+      "error_percent": 0.312269138963689,
+      "circuit_depth": 2,
+      "num_qubits": 6,
+      "sigma_p": 0.19958707372973833
+    },
+    "OTM": {
+      "K": 110.0,
+      "classical": 0.723513258722474,
+      "quantum": 0.7351250325395736,
+      "error_percent": 1.6049151383352487,
+      "circuit_depth": 2,
+      "num_qubits": 6,
+      "sigma_p": 0.19958707372973833
+    }
+  }
+}

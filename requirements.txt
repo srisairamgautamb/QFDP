@@ -1,0 +1,65 @@
+# QFDP Multi-Asset Portfolio Management
+# Requirements File - All dependencies pinned for reproducibility
+
+# Core Quantum Computing
+qiskit==1.0.2
+qiskit-aer==0.14.0.1
+qiskit-algorithms==0.3.0
+qiskit-optimization==0.6.0
+
+# QSP Phase Synthesis
+pyqsp==0.2.0
+
+# Numerical Computing
+numpy==1.26.4
+scipy==1.11.4
+pandas==2.2.0
+
+# Optimization
+cvxpy==1.4.2
+scikit-learn==1.4.0
+
+# Visualization
+matplotlib==3.8.2
+seaborn==0.13.1
+plotly==5.18.0
+
+# Jupyter & Notebooks
+jupyter==1.0.0
+jupyterlab==4.0.11
+ipywidgets==8.1.1
+nbconvert==7.14.2
+
+# Testing & Quality Assurance
+pytest==7.4.4
+pytest-cov==4.1.0
+pytest-xdist==3.5.0
+hypothesis==6.96.1
+
+# Code Quality
+black==24.1.1
+isort==5.13.2
+flake8==7.0.0
+mypy==1.8.0
+pylint==3.0.3
+
+# Documentation
+sphinx==7.2.6
+sphinx-rtd-theme==2.0.0
+pdoc3==0.10.0
+
+# Utilities
+tqdm==4.66.1
+colorama==0.4.6
+python-dotenv==1.0.0
+
+# Reproducibility
+pyyaml==6.0.1
+jsonschema==4.20.0
+
+# Optional: GPU Acceleration (CUDA)
+# cuquantum-python==23.10.0  # Uncomment if NVIDIA GPU available
+
+# Development Tools
+ipython==8.20.0
+autopep8==2.0.4
