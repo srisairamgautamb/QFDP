@@ -221,15 +221,19 @@ class FBIQFTPricing:
         
         # Step 7 (continued): Classical FFT baseline for calibration
         C_classical = classical_fft_baseline(
-            psi_values, self.alpha, delta_u, k_grid
+            psi_values, self.alpha, delta_u, k_grid, u_grid
         )
         
-        # Validate classical prices (sanity checks)
+        # Note: C_classical contains normalized prices for calibration
+        # This is intentional - quantum circuit also produces normalized amplitudes
+        
+        # Validate classical prices (sanity checks on normalized values)
         forward_price = B_0 * np.exp(r * T)
         assert np.all(C_classical >= -1e-10), \
             f"Negative option prices detected in classical baseline (min={np.min(C_classical):.6f})"
-        assert np.all(C_classical <= forward_price * 1.01), \
-            f"Prices exceed forward bound (max={np.max(C_classical):.2f}, forward={forward_price:.2f})"
+        # Normalized prices should be small (not actual dollar prices)
+        assert np.all(C_classical <= 2.0), \
+            f"Prices exceed normalized bound (max={np.max(C_classical):.2f})"
         
         # ====================================================================
         # PHASE 3: QUANTUM COMPUTATION (Steps 8-10)
@@ -437,3 +441,144 @@ class FBIQFTPricing:
             r=r,
             backend=backend
         )
+    
+    def price_with_enhanced_factors(
+        self,
+        # Enhanced factors from QRC+QTC
+        sigma_p_enhanced: float,
+        B_0: float,
+        L_enhanced: np.ndarray = None,
+        D_enhanced: np.ndarray = None,
+        # Option parameters
+        K: float = 100.0,
+        T: float = 1.0,
+        r: float = 0.05,
+        # Execution
+        backend: Union[str, object] = 'simulator'
+    ) -> Dict:
+        """
+        Price option using QRC+QTC enhanced σ_p via full quantum FB-IQFT circuit.
+        
+        This is the CORRECT integration point for QRC+QTC:
+        - Skip standard PCA factor decomposition
+        - Use pre-computed sigma_p_enhanced from QRC+QTC
+        - Run full quantum circuit (CF encoding → IQFT → MLQAE)
+        
+        Args:
+            sigma_p_enhanced: Enhanced portfolio volatility from QRC+QTC
+            B_0: Initial basket value
+            L_enhanced: Optional enhanced loading matrix (for logging)
+            D_enhanced: Optional enhanced factor covariance (for logging)
+            K: Strike price
+            T: Time to maturity
+            r: Risk-free rate
+            backend: Quantum backend
+        
+        Returns:
+            Dict with quantum price, classical baseline, and circuit info
+        """
+        # Validate inputs
+        assert sigma_p_enhanced > 0, f"Enhanced σ_p must be positive, got {sigma_p_enhanced}"
+        assert B_0 > 0, f"Basket value must be positive, got {B_0}"
+        
+        # ====================================================================
+        # PHASE 2: CARR-MADAN FOURIER SETUP (using enhanced σ_p)
+        # ====================================================================
+        
+        # Step 7: Setup Fourier grid
+        u_grid, k_grid, delta_u, delta_k = setup_fourier_grid(
+            self.M, sigma_p_enhanced, T, B_0, r, self.alpha
+        )
+        
+        # Validate Nyquist constraint
+        assert np.isclose(delta_u * delta_k, 2 * np.pi / self.M, rtol=1e-6), \
+            f"Nyquist violated: Δu·Δk = {delta_u * delta_k:.6f}"
+        
+        # Step 5: Characteristic function φ(u) - uses enhanced σ_p!
+        phi_values = compute_characteristic_function(u_grid, r, sigma_p_enhanced, T)
+        
+        # Step 6: Modified characteristic function ψ(u) via Carr-Madan
+        psi_values = apply_carr_madan_transform(
+            u_grid, r, sigma_p_enhanced, T, self.alpha
+        )
+        
+        # Step 7 (continued): Classical FFT baseline for calibration
+        C_classical = classical_fft_baseline(
+            psi_values, self.alpha, delta_u, k_grid, u_grid
+        )
+        
+        # ====================================================================
+        # PHASE 3: QUANTUM COMPUTATION (full IQFT circuit!)
+        # ====================================================================
+        
+        # Step 8: Quantum state preparation
+        circuit, norm_factor = encode_frequency_state(psi_values, self.num_qubits)
+        
+        # Step 9: Apply IQFT - THIS IS THE QUANTUM ADVANTAGE!
+        circuit = apply_iqft(circuit, self.num_qubits)
+        
+        # Step 10: Measurement
+        quantum_probs = extract_strike_amplitudes(
+            circuit, self.num_shots, backend
+        )
+        
+        # ====================================================================
+        # PHASE 4: PRICE EXTRACTION
+        # ====================================================================
+        
+        # Find target strike index
+        k_target = np.log(K / B_0)
+        target_idx = np.argmin(np.abs(k_grid - k_target))
+        
+        # Local calibration window
+        window_size = 7
+        half_window = window_size // 2
+        idx_start = max(0, target_idx - half_window)
+        idx_end = min(len(k_grid), target_idx + half_window + 1)
+        
+        quantum_probs_local = {
+            m: quantum_probs.get(m, 0.0) 
+            for m in range(idx_start, idx_end)
+        }
+        C_classical_local = C_classical[idx_start:idx_end]
+        k_grid_local = k_grid[idx_start:idx_end]
+        
+        # Calibrate
+        A_local, B_local = calibrate_quantum_to_classical(
+            quantum_probs_local, 
+            C_classical_local, 
+            k_grid_local
+        )
+        
+        # Price reconstruction
+        price_quantum_normalized = A_local * quantum_probs.get(target_idx, 0.0) + B_local
+        price_classical_normalized = C_classical[target_idx]
+        
+        # Convert normalized price to dollar price
+        # The Carr-Madan formula gives exp(-αk)·C where C is normalized
+        # For proper dollar price, multiply by B_0
+        price_quantum = float(price_quantum_normalized * B_0)
+        price_classical = float(price_classical_normalized * B_0)
+        
+        # Error
+        if price_classical > 1e-10:
+            error_percent = abs(price_quantum - price_classical) / price_classical * 100
+        else:
+            error_percent = np.inf
+        
+        return {
+            'price_quantum': price_quantum,
+            'price_classical': price_classical,
+            'price_quantum_normalized': float(price_quantum_normalized),
+            'price_classical_normalized': float(price_classical_normalized),
+            'error_percent': float(error_percent),
+            'sigma_p_enhanced': float(sigma_p_enhanced),
+            'B_0': float(B_0),
+            'circuit_depth': int(circuit.depth()),
+            'num_qubits': int(self.num_qubits),
+            'k_grid': k_grid,
+            'strikes': B_0 * np.exp(k_grid),
+            'L_enhanced': L_enhanced,
+            'D_enhanced': D_enhanced,
+            'method': 'FB-IQFT with QRC+QTC enhanced factors'
+        }

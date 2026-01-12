@@ -106,18 +106,31 @@ def extract_strike_amplitudes(
         >>> print(f"Max probability: {max(probs.values()):.4f}")
     """
     from qiskit import transpile
-    from qiskit_aer import AerSimulator
+    
+    # Try to import AerSimulator, fallback to Statevector if not available
+    try:
+        from qiskit_aer import AerSimulator
+        USE_AER = True
+    except ImportError:
+        from qiskit.quantum_info import Statevector
+        USE_AER = False
     
     # Add measurements to a copy of the circuit
     qc = circuit.copy()
     num_qubits = circuit.num_qubits
-    qc.measure_all()
     
     # Select backend and execution method
     use_primitives = False
+    use_statevector = False
+    
     if isinstance(backend, str):
         if backend == 'simulator':
-            backend_obj = AerSimulator()
+            if USE_AER:
+                backend_obj = AerSimulator()
+            else:
+                # Use Statevector simulation (no shots needed)
+                use_statevector = True
+                backend_obj = None
         elif backend == 'ibm_torino' or backend.startswith('ibm_'):
             # Use IBM Quantum Primitives for hardware
             from qiskit_ibm_runtime import QiskitRuntimeService, SamplerV2 as Sampler
@@ -139,6 +152,22 @@ def extract_strike_amplitudes(
                 use_primitives = True
         except ImportError:
             pass
+    
+    # Execute based on backend type
+    if use_statevector:
+        # Use Statevector for exact simulation without AerSimulator
+        sv = Statevector.from_instruction(qc)
+        probabilities_array = sv.probabilities()
+        
+        # Convert to dictionary format
+        probabilities = {}
+        for m, prob in enumerate(probabilities_array):
+            probabilities[m] = float(prob)
+        
+        return probabilities
+    
+    # Add measurements for shot-based simulation
+    qc.measure_all()
     
     # Transpile for backend
     qc_transpiled = transpile(qc, backend=backend_obj)

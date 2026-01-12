@@ -1,0 +1,83 @@
+{
+  "backend": "ibm_fez",
+  "num_qubits": 156,
+  "timestamp": "2025-12-15T13:01:09.640247",
+  "results": {
+    "1_asset": {
+      "bs": 10.450583572185565,
+      "classical_fft": 0.8017958259906589,
+      "quantum": 0.7976289291643759,
+      "t_bs": 0.0009071826934814453,
+      "t_quantum": 296.2897641658783,
+      "error_vs_fft": 0.5196954999278784,
+      "winner": "Classical"
+    },
+    "3_asset": {
+      "bs": 9.411342571901862,
+      "mc": 8.939178515550802,
+      "classical_fft": 0.4633570529576614,
+      "quantum": 0.4701596751396256,
+      "t_mc": 0.01250004768371582,
+      "t_quantum": 30.187134981155396,
+      "error_vs_fft": 1.468116679899935,
+      "winner": "Quantum"
+    },
+    "5_asset": {
+      "bs": 8.725579736657835,
+      "mc": 8.007797373004095,
+      "classical_fft": 0.5517940033140806,
+      "quantum": 0.555976430353386,
+      "t_mc": 0.015902042388916016,
+      "t_quantum": 8.653772830963135,
+      "error_vs_fft": 0.7579689185068487,
+      "winner": "Quantum"
+    },
+    "10_asset": {
+      "bs": 8.59696591891121,
+      "mc": 7.766865579195518,
+      "classical_fft": 0.571244728333119,
+      "quantum": 0.5748311162635606,
+      "t_mc": 0.029989004135131836,
+      "t_quantum": 13.128866195678711,
+      "error_vs_fft": 0.6278198734378954,
+      "winner": "Quantum"
+    },
+    "50_asset": {
+      "bs": 6.6955831184894095,
+      "mc": 5.450902364120695,
+      "classical_fft": 1.0613140763758515,
+      "quantum": 1.0747925220683623,
+      "t_mc": 0.14411497116088867,
+      "t_quantum": 7.788660049438477,
+      "error_vs_fft": 1.269977096557188,
+      "winner": "Quantum"
+    },
+    "rainbow": {
+      "bs": 8.59696591891121,
+      "mc": 7.766865579195518,
+      "classical_fft": 0.571244728333119,
+      "quantum": 0.5748311162635606,
+      "t_mc": 0.029989004135131836,
+      "t_quantum": 13.128866195678711,
+      "error_vs_fft": 0.6278198734378954,
+      "winner": "Quantum"
+    },
+    "ultra_precision": {
+      "winner": "Classical"
+    }
+  },
+  "timing_breakdown": {
+    "1_asset": {
+      "total": 296.2897641658783,
+      "queue_wait": 0,
+      "execution": 296.28977704048157
+    }
+  },
+  "methodology": {
+    "error_calculation": "Error = |Quantum - Classical_FFT| / Classical_FFT * 100",
+    "baseline": "Classical FFT via Carr-Madan (internal)",
+    "quantum_method": "FB-IQFT with MLQAE",
+    "grid_size": 64,
+    "shots": 8192
+  }
+}
